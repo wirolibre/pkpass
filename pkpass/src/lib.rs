@@ -1,12 +1,16 @@
 //! pkpass
 
-use models::Manifest;
+use models::{
+	fields::PassKind,
+	manifest::{AssetTable, Manifest},
+	ColorTheme, Pass,
+};
 use openssl::{
 	pkcs7::{Pkcs7, Pkcs7Flags},
 	stack::Stack,
 	x509::store::X509StoreBuilder,
 };
-use sign::Identity;
+use sign::{wwdr, Identity};
 use std::{
 	collections::HashMap,
 	io::{self, Read, Seek, Write},
@@ -14,58 +18,55 @@ use std::{
 };
 use zip::{result::ZipError, write::SimpleFileOptions, ZipArchive};
 
-use crate::{
-	models::{AssetContent, AssetType},
-	sign::wwdr,
-};
+use crate::models::manifest::{AssetContent, AssetType};
 
 pub mod models;
 pub mod sign;
 
 #[derive(Debug)]
 pub struct PkPass {
-	pub pass: models::Pass,
-	pub assets: models::AssetTable,
+	pub pass: Pass,
+	pub assets: AssetTable,
 }
 
 impl PkPass {
-	pub fn new(description: String, serial_number: String) -> Self {
+	#[must_use]
+	pub fn new(description: String, serial_number: String, kind: PassKind) -> Self {
 		Self {
-			pass: models::Pass {
-				app_launch_url: None,
-				associated_store_identifiers: None,
-				authentication_token: None,
-				background_color: None,
-				foreground_color: None,
-				barcode: None,
-				barcodes: None,
-				beacons: None,
-				boarding_pass: None,
-				coupon: None,
-				description,
-				event_ticket: None,
-				expiration_date: None,
+			pass: Pass {
 				format_version: 1,
-				generic: None,
-				grouping_identifier: None,
-				label_color: None,
-				locations: None,
-				logo_text: None,
-				max_distance: None,
-				nfc: None,
+
 				// TODO: ugly
 				organization_name: String::new(),
 				pass_type_identifier: String::new(),
+				team_identifier: String::new(),
+
+				description,
+				serial_number,
+
+				color_theme: ColorTheme::default(),
+				kind,
+
+				app_launch_url: None,
+				associated_store_identifiers: Vec::default(),
+
+				barcodes: Vec::default(),
+				beacons: Vec::default(),
+				expiration_date: None,
+				grouping_identifier: None,
+				locations: Vec::default(),
+				logo_text: None,
+				max_distance: None,
+				nfc: None,
 				relevant_date: None,
 				semantics: None,
-				serial_number,
 				sharing_prohibited: None,
-				store_card: None,
 				suppress_strip_shine: None,
-				team_identifier: String::new(),
 				user_info: None,
 				voided: None,
+
 				web_service_url: None,
+				authentication_token: None,
 			},
 			assets: HashMap::default(),
 		}
@@ -107,7 +108,7 @@ impl PkPass {
 			let _ = sig.verify(&stack, &store, Some(&manifest), None, Pkcs7Flags::empty());
 		}
 
-		let manifest: models::Manifest = serde_json::from_slice(&manifest)?;
+		let manifest: Manifest = serde_json::from_slice(&manifest)?;
 
 		// TODO: verify manifest based on sig
 		let pass: models::Pass = match zip.by_name("pass.json") {
@@ -144,7 +145,6 @@ impl PkPass {
 	pub fn write<W: Write + Seek>(&mut self, identity: Identity, writer: W) -> io::Result<()> {
 		self.pass.team_identifier = identity.team_id;
 		self.pass.pass_type_identifier = identity.pass_type_id;
-		self.pass.organization_name = identity.organization_name;
 		// ---ugly---
 
 		let mut manifest = Manifest::default();
@@ -170,13 +170,10 @@ impl PkPass {
 		zip.write_all(&manifest_data)?;
 
 		if let Some(pen) = identity.pen {
-			let mut certs = Stack::new()?;
-			certs.push(pen.root_certificate)?;
-
 			let signature = Pkcs7::sign(
 				&pen.signer_certificate,
 				&pen.signer_private_key,
-				&certs,
+				&pen.chain,
 				&manifest_data,
 				Pkcs7Flags::DETACHED,
 			)?;

@@ -1,0 +1,18 @@
+lints.workspace = true
+
+[package]
+name = "pkpass-cli"
+version = "0.1.0"
+edition = "2021"
+default-run = "pkpass"
+
+[[bin]]
+name = "pkpass"
+path = "src/main.rs"
+
+[dependencies]
+pkpass.workspace = true
+
+clap = { version = "4.5.9", features = ["derive", "env"] }
+rcgen = { version = "0.13.1", features = ["x509-parser"] }
+openssl = "0.10.66"

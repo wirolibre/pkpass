@@ -1,17 +1,17 @@
-use std::fmt;
-
 use openssl::{
 	nid::Nid,
+	pkcs12::ParsedPkcs12_2,
 	pkey::{PKey, Private},
+	stack::Stack,
 	x509::{X509NameEntryRef, X509},
 };
+use std::{fmt, io};
 
 #[derive(Debug)]
 pub struct Identity {
-	pub(crate) organization_name: String,
+	pub(crate) pen: Option<SigningPen>,
 	pub(crate) pass_type_id: String,
 	pub(crate) team_id: String,
-	pub(crate) pen: Option<SigningPen>,
 }
 
 impl Identity {
@@ -23,24 +23,21 @@ impl Identity {
 
 		let name = pen.signer_certificate.subject_name();
 
-		let organization_name = get_str(name.entries_by_nid(Nid::ORGANIZATIONNAME).next())?;
 		let pass_type_id = get_str(name.entries_by_nid(Nid::USERID).next())?;
 		let team_id = get_str(name.entries_by_nid(Nid::ORGANIZATIONALUNITNAME).next())?;
 
 		Some(Self {
-			organization_name,
+			pen: Some(pen),
 			pass_type_id,
 			team_id,
-			pen: Some(pen),
 		})
 	}
 }
 
-// TODO: use zeroize?
 pub struct SigningPen {
-	pub(crate) root_certificate: X509,
-	pub(crate) signer_certificate: X509,
 	pub(crate) signer_private_key: PKey<Private>,
+	pub(crate) signer_certificate: X509,
+	pub(crate) chain: Stack<X509>,
 }
 
 impl fmt::Debug for SigningPen {
@@ -51,25 +48,37 @@ impl fmt::Debug for SigningPen {
 
 impl SigningPen {
 	#[must_use]
-	pub fn new_apple(signer_certificate: X509, signer_private_key: PKey<Private>) -> Self {
+	pub fn new(
+		signer_private_key: PKey<Private>,
+		signer_certificate: X509,
+		chain: Stack<X509>,
+	) -> Self {
 		Self {
-			root_certificate: wwdr::g4(),
-			signer_certificate,
 			signer_private_key,
+			signer_certificate,
+			chain,
 		}
 	}
 
 	#[must_use]
-	pub fn new_custom(
-		root_certificate: X509,
-		signer_certificate: X509,
-		signer_private_key: PKey<Private>,
-	) -> Self {
-		Self {
-			root_certificate,
-			signer_certificate,
+	pub fn from_pkcs12(pkcs12: ParsedPkcs12_2) -> io::Result<Self> {
+		let invalid_input = |msg: &str| io::Error::new(io::ErrorKind::InvalidInput, msg);
+
+		let signer_private_key = pkcs12
+			.pkey
+			.ok_or_else(|| invalid_input("archive has to contain a private key"))?;
+		let signer_certificate = pkcs12
+			.cert
+			.ok_or_else(|| invalid_input("archive has to contain a certificate"))?;
+		let chain = pkcs12
+			.ca
+			.ok_or_else(|| invalid_input("archive has to contain a chain of trust"))?;
+
+		Ok(Self {
 			signer_private_key,
-		}
+			signer_certificate,
+			chain,
+		})
 	}
 }
 

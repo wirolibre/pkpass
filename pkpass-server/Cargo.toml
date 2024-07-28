@@ -1,0 +1,9 @@
+lints.workspace = true
+
+[package]
+name = "pkpass-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pkpass.workspace = true
