@@ -19,18 +19,18 @@ pub mod semantics;
 /// <https://developer.apple.com/documentation/walletpasses/pass>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct Pass {
+pub struct Metadata {
 	/// The version of the file format. The value must be 1.
 	pub(crate) format_version: u64,
 
-	/// The name of the organization.
-	// TODO: localizable string
-	pub organization_name: String,
 	/// The pass type identifier that’s registered with Apple. The value must be the same as the distribution certificate used to sign the pass.
 	pub(crate) pass_type_identifier: String,
 	/// The Team ID for the Apple Developer Program account that registered the pass type identifier.
 	pub(crate) team_identifier: String,
 
+	/// The name of the organization.
+	// TODO: localizable string
+	pub organization_name: String,
 	/// A short description that iOS accessibility technologies use for a pass.
 	// TODO: localizable string
 	pub(crate) description: String,
@@ -319,20 +319,20 @@ pub struct Beacon {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Location {
-	/// The altitude, in meters, of the location.
-	#[serde(skip_serializing_if = "Option::is_none")]
-	altitude: Option<f64>,
-
 	/// The latitude, in degrees, of the location.
-	latitude: f64,
+	pub latitude: f64,
 
 	/// The longitude, in degrees, of the location.
-	longitude: f64,
+	pub longitude: f64,
+
+	/// The altitude, in meters, of the location.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub altitude: Option<f64>,
 
 	/// The text to display on the lock screen when the pass is relevant. For
 	/// example, a description of a nearby location, such as “Store nearby on 1st and Main”.
 	#[serde(skip_serializing_if = "Option::is_none")]
-	relevant_text: Option<String>,
+	pub relevant_text: Option<String>,
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/nfc>

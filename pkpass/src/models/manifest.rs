@@ -2,8 +2,7 @@ use openssl::sha::Sha1;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::{hash_map::Entry, HashMap},
-	fmt,
-	ops::Deref,
+	io,
 	str::FromStr,
 };
 use unic_langid::LanguageIdentifier;
@@ -37,148 +36,6 @@ fn sha1(data: &[u8]) -> String {
 	hex::encode(hasher.finish())
 }
 
-#[derive(PartialEq, Eq, Hash)]
-pub enum AssetType {
-	Image(Image),
-	Localized(LanguageIdentifier, LocalizedAssetType),
-}
-
-impl fmt::Display for AssetType {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-			Self::Image(image) => write!(f, "{image}"),
-			Self::Localized(lang, subasset) => write!(f, "{lang}.lproj/{subasset}"),
-		}
-	}
-}
-
-impl fmt::Debug for AssetType {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-			Self::Image(image) => write!(f, "Image({image:?})"),
-			Self::Localized(lang, subasset) => write!(f, "Localized({lang}, {subasset:?})"),
-		}
-	}
-}
-
-impl FromStr for AssetType {
-	type Err = ();
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		match s.split_once('/').map_or((s, None), |(a, b)| (a, Some(b))) {
-			(one, None) => Ok(Self::Image(Image::from_str(one)?)),
-			(one, Some(two)) => {
-				let lang = one.strip_suffix(".lproj").unwrap();
-				let lang = LanguageIdentifier::from_str(lang).unwrap();
-				Ok(Self::Localized(lang, LocalizedAssetType::from_str(two)?))
-			}
-		}
-	}
-}
-
-#[derive(PartialEq, Eq, Hash)]
-pub enum LocalizedAssetType {
-	Image(Image),
-	/// `pass.strings`
-	Strings,
-}
-
-impl fmt::Display for LocalizedAssetType {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-			Self::Image(image) => write!(f, "{image}"),
-			Self::Strings => write!(f, "pass.strings"),
-		}
-	}
-}
-
-impl fmt::Debug for LocalizedAssetType {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-			Self::Image(image) => write!(f, "{image}"),
-			Self::Strings => write!(f, "Strings"),
-		}
-	}
-}
-
-impl FromStr for LocalizedAssetType {
-	type Err = ();
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		match s {
-			"pass.strings" => Ok(Self::Strings),
-			s => Ok(Self::Image(Image::from_str(s).unwrap())),
-		}
-	}
-}
-
-#[derive(PartialEq, Eq, Hash)]
-pub enum Image {
-	/// The background image (background.png)
-	Background(Version),
-	/// The footer image (footer.png)
-	Footer(Version),
-	/// The icon (icon.png)
-	Icon(Version),
-	/// The logo image (logo.png)
-	Logo(Version),
-	/// The strip image (strip.png)
-	Strip(Version),
-	/// The thumbnail image (thumbnail.png)
-	Thumbnail(Version),
-}
-
-impl fmt::Display for Image {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-			Self::Background(v) => write!(f, "background{v}.png"),
-			Self::Footer(v) => write!(f, "footer{v}.png"),
-			Self::Icon(v) => write!(f, "icon{v}.png"),
-			Self::Logo(v) => write!(f, "logo{v}.png"),
-			Self::Strip(v) => write!(f, "strip{v}.png"),
-			Self::Thumbnail(v) => write!(f, "thumbnail{v}.png"),
-		}
-	}
-}
-
-impl fmt::Debug for Image {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-			Self::Background(v) => write!(f, "Background-{v:?}"),
-			Self::Footer(v) => write!(f, "Footer-{v:?}"),
-			Self::Icon(v) => write!(f, "Icon-{v:?}"),
-			Self::Logo(v) => write!(f, "Logo-{v:?}"),
-			Self::Strip(v) => write!(f, "Strip-{v:?}"),
-			Self::Thumbnail(v) => write!(f, "Thumbnail-{v:?}"),
-		}
-	}
-}
-
-impl FromStr for Image {
-	type Err = ();
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		let name = s.strip_suffix(".png").unwrap();
-		let (name, version) = name.split_once('@').unwrap_or((name, ""));
-
-		let version = match version {
-			"" => Version::Standard,
-			"2x" => Version::Size2X,
-			"3x" => Version::Size3X,
-			_ => return Err(()),
-		};
-
-		let image = match name {
-			"background" => Self::Background(version),
-			"footer" => Self::Footer(version),
-			"icon" => Self::Icon(version),
-			"logo" => Self::Logo(version),
-			"strip" => Self::Strip(version),
-			"thumbnail" => Self::Thumbnail(version),
-			_ => return Err(()),
-		};
-
-		Ok(image)
-	}
-}
-
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum Version {
 	Standard,
@@ -186,51 +43,179 @@ pub enum Version {
 	Size3X,
 }
 
-impl fmt::Display for Version {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		match self {
-			Self::Standard => write!(f, ""),
-			Self::Size2X => write!(f, "@2x"),
-			Self::Size3X => write!(f, "@3x"),
-		}
-	}
-}
-
-// From String
 impl FromStr for Version {
 	type Err = ();
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		match s {
 			"" => Ok(Self::Standard),
-			"@2x" => Ok(Self::Size2X),
-			"@3x" => Ok(Self::Size3X),
+			"2x" => Ok(Self::Size2X),
+			"3x" => Ok(Self::Size3X),
 			_ => Err(()),
 		}
 	}
 }
 
-// hides content in debug print
-pub struct AssetContent(Vec<u8>);
+#[derive(Debug, Default)]
+pub struct Assets {
+	pub images: ImageAssets,
+	localized: HashMap<LanguageIdentifier, LocalizedAssets>,
+}
 
-impl AssetContent {
-	#[must_use]
-	pub fn new(data: Vec<u8>) -> Self {
-		Self(data)
+impl Assets {
+	pub fn get(&mut self, lang: LanguageIdentifier) -> &mut LocalizedAssets {
+		self.localized.entry(lang).or_default()
+	}
+
+	pub(crate) fn get_mut(&mut self, path: &str) -> io::Result<&mut Vec<u8>> {
+		// path can be escaped?
+		match path.split_once('/') {
+			Some((lang, localized_path)) => {
+				let lang = lang.strip_suffix(".lproj").ok_or_else(|| {
+					io::Error::new(
+						io::ErrorKind::InvalidData,
+						"path with slash is not a localized directory",
+					)
+				})?;
+				let lang = LanguageIdentifier::from_str(lang).map_err(|_| {
+					io::Error::new(io::ErrorKind::InvalidData, "could not parse lang")
+				})?;
+
+				Ok(self
+					.localized
+					.entry(lang)
+					.or_default()
+					.get_mut(localized_path)?)
+			}
+			None => self.images.get_mut(path),
+		}
+	}
+
+	pub(crate) fn paths(&self) -> Vec<(String, &Vec<u8>)> {
+		let mut v = self.images.paths();
+		for (lang, lasst) in &self.localized {
+			for (path, ct) in lasst.paths() {
+				v.push((format!("{lang}.lproj/{path}"), ct));
+			}
+		}
+		v
 	}
 }
 
-impl Deref for AssetContent {
-	type Target = Vec<u8>;
-	fn deref(&self) -> &Self::Target {
-		&self.0
+#[derive(Debug, Default)]
+pub struct ImageAssets {
+	/// The icon (icon.png)
+	pub icon: ImageAsset,
+	/// The background image (background.png)
+	pub background: ImageAsset,
+	/// The footer image (footer.png)
+	pub footer: ImageAsset,
+	/// The logo image (logo.png)
+	pub logo: ImageAsset,
+	/// The strip image (strip.png)
+	pub strip: ImageAsset,
+	/// The thumbnail image (thumbnail.png)
+	pub thumbnail: ImageAsset,
+}
+
+impl ImageAssets {
+	pub(crate) fn get_mut(&mut self, path: &str) -> io::Result<&mut Vec<u8>> {
+		let name = path.strip_suffix(".png").ok_or_else(|| {
+			io::Error::new(
+				io::ErrorKind::InvalidData,
+				"images are expected in png format",
+			)
+		})?;
+		let (name, version) = name.split_once('@').unwrap_or((name, ""));
+
+		let version = Version::from_str(version).map_err(|()| {
+			io::Error::new(
+				io::ErrorKind::InvalidData,
+				"image version is not recognized",
+			)
+		})?;
+
+		let asset = match name {
+			"background" => &mut self.background,
+			"footer" => &mut self.footer,
+			"icon" => &mut self.icon,
+			"logo" => &mut self.logo,
+			"strip" => &mut self.strip,
+			"thumbnail" => &mut self.thumbnail,
+			_ => return Err(io::Error::new(io::ErrorKind::InvalidData, "")),
+		};
+
+		Ok(asset.get_mut(&version))
+	}
+
+	pub(crate) fn paths(&self) -> Vec<(String, &Vec<u8>)> {
+		let mut paths = vec![];
+		for (name, image) in [
+			("icon", &self.icon),
+			("background", &self.background),
+			("footer", &self.footer),
+			("logo", &self.logo),
+			("strip", &self.strip),
+			("thumbnail", &self.thumbnail),
+		] {
+			for (v, ct) in image.versions() {
+				paths.push((format!("{name}{v}.png"), ct));
+			}
+		}
+		paths
 	}
 }
 
-impl fmt::Debug for AssetContent {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.debug_tuple("AssetContent").finish()
+#[derive(Debug, Default)]
+pub struct LocalizedAssets {
+	pub images: ImageAssets,
+	pub strings: Option<Vec<u8>>,
+}
+
+impl LocalizedAssets {
+	pub(crate) fn get_mut(&mut self, localized_path: &str) -> io::Result<&mut Vec<u8>> {
+		match localized_path {
+			"pass.strings" => Ok(self.strings.get_or_insert_with(Default::default)),
+			_ => self.images.get_mut(localized_path),
+		}
+	}
+
+	pub(crate) fn paths(&self) -> Vec<(String, &Vec<u8>)> {
+		let mut v = self.images.paths();
+		if let Some(strings) = &self.strings {
+			v.push(("pass.strings".into(), strings));
+		}
+		v
 	}
 }
 
-pub type AssetTable = HashMap<AssetType, AssetContent>;
+#[derive(Debug, Default)]
+pub struct ImageAsset {
+	pub size_x1: Option<Vec<u8>>,
+	pub size_x2: Option<Vec<u8>>,
+	pub size_x3: Option<Vec<u8>>,
+}
+
+impl ImageAsset {
+	pub(crate) fn get_mut(&mut self, version: &Version) -> &mut Vec<u8> {
+		match version {
+			Version::Standard => self.size_x1.get_or_insert_with(Default::default),
+			Version::Size2X => self.size_x2.get_or_insert_with(Default::default),
+			Version::Size3X => self.size_x3.get_or_insert_with(Default::default),
+		}
+	}
+
+	pub(crate) fn versions(&self) -> Vec<(&str, &Vec<u8>)> {
+		let mut v = vec![];
+		if let Some(s1) = &self.size_x1 {
+			v.push(("", s1));
+		}
+		if let Some(s2) = &self.size_x2 {
+			v.push(("@2x", s2));
+		}
+		if let Some(s3) = &self.size_x3 {
+			v.push(("@3x", s3));
+		}
+		v
+	}
+}

@@ -1,30 +1,29 @@
 use openssl::pkcs12::Pkcs12;
 use pkpass::{
-	models::{
-		fields::{EventTicket, PassFields, PassKind},
-		manifest::{AssetContent, AssetType, Image, Version},
-	},
+	models::fields::{EventTicket, PassFields, PassKind},
 	sign::{Identity, SigningPen},
-	PkPass,
+	Pass,
 };
 use std::{fs, io};
 use uuid::Uuid;
+
+const ICON: &[u8; 314_069] = include_bytes!("assets/icon.png");
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let identity = get_identity()?;
 
 	let fields = PassFields::default();
 
-	let mut pass = PkPass::new(
+	let mut pass = Pass::new(
+		"Acme Inc.".into(),
 		"A custom pass to try out my library".into(),
 		Uuid::new_v4().as_simple().to_string(),
 		PassKind::EventTicket(EventTicket { fields }),
 	);
 
-	pass.assets.insert(
-		AssetType::Image(Image::Icon(Version::Standard)),
-		AssetContent::new(include_bytes!("assets/pinault-icon.png").to_vec()),
-	);
+	let Pass { metadata, assets } = &mut pass;
+
+	assets.images.icon.size_x1.replace(ICON.to_vec());
 
 	let file = fs::OpenOptions::new()
 		.write(true)
@@ -44,7 +43,7 @@ fn get_identity() -> io::Result<Identity> {
 		.parse2("")?;
 
 	let pen = SigningPen::from_pkcs12(pkcs12)?;
-	let identity = Identity::from_apple_pen(pen).unwrap();
+	let identity = Identity::from_apple_pen(pen)?;
 
 	Ok(identity)
 }

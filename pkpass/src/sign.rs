@@ -3,9 +3,9 @@ use openssl::{
 	pkcs12::ParsedPkcs12_2,
 	pkey::{PKey, Private},
 	stack::Stack,
-	x509::{X509NameEntryRef, X509},
+	x509::X509,
 };
-use std::{fmt, io};
+use std::{fmt, io, str::FromStr};
 
 #[derive(Debug)]
 pub struct Identity {
@@ -15,18 +15,28 @@ pub struct Identity {
 }
 
 impl Identity {
-	#[must_use]
-	pub fn from_apple_pen(pen: SigningPen) -> Option<Self> {
-		fn get_str(op: Option<&'_ X509NameEntryRef>) -> Option<String> {
-			Some(op?.data().as_utf8().ok()?.to_string())
-		}
-
+	pub fn from_apple_pen(pen: SigningPen) -> io::Result<Self> {
 		let name = pen.signer_certificate.subject_name();
 
-		let pass_type_id = get_str(name.entries_by_nid(Nid::USERID).next())?;
-		let team_id = get_str(name.entries_by_nid(Nid::ORGANIZATIONALUNITNAME).next())?;
+		let get_entry = |nid: Nid| {
+			let op = name.entries_by_nid(nid).next();
+			Some(op?.data().as_utf8().ok()?.to_string())
+		};
 
-		Some(Self {
+		let pass_type_id = get_entry(Nid::USERID).ok_or_else(|| {
+			io::Error::new(
+				io::ErrorKind::NotFound,
+				"could not find user id on apple cert",
+			)
+		})?;
+		let team_id = get_entry(Nid::ORGANIZATIONALUNITNAME).ok_or_else(|| {
+			io::Error::new(
+				io::ErrorKind::NotFound,
+				"could not find organization unit name on apple cert",
+			)
+		})?;
+
+		Ok(Self {
 			pen: Some(pen),
 			pass_type_id,
 			team_id,
@@ -60,7 +70,6 @@ impl SigningPen {
 		}
 	}
 
-	#[must_use]
 	pub fn from_pkcs12(pkcs12: ParsedPkcs12_2) -> io::Result<Self> {
 		let invalid_input = |msg: &str| io::Error::new(io::ErrorKind::InvalidInput, msg);
 
@@ -82,20 +91,60 @@ impl SigningPen {
 	}
 }
 
-/// *Worldwide Developer Relations* Apple certificates
-pub mod wwdr {
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum VerifyMode {
+	#[default]
+	Yes,
+	No,
+}
+
+impl FromStr for VerifyMode {
+	type Err = std::io::Error;
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s {
+			"yes" => Ok(Self::Yes),
+			"no" => Ok(Self::No),
+			_ => Err(io::Error::new(io::ErrorKind::InvalidInput, "")),
+		}
+	}
+}
+
+impl fmt::Display for VerifyMode {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Self::Yes => write!(f, "yes"),
+			Self::No => write!(f, "no"),
+		}
+	}
+}
+
+pub mod certificates {
 	use openssl::x509::X509;
 
-	const G4: &[u8; 1113] = include_bytes!("AppleWWDRCAG4.cer");
+	const APPLE_ROOT: &[u8; 1215] = include_bytes!("AppleIncRootCertificate.cer");
+	const APPLE_WWDR_G4: &[u8; 1113] = include_bytes!("AppleWWDRCAG4.cer");
 
+	/// *Worldwide Developer Relations* Apple certificates
 	#[must_use]
-	pub fn g4() -> X509 {
-		X509::from_der(G4)
+	pub fn apple_root() -> X509 {
+		X509::from_der(APPLE_ROOT)
+			.unwrap_or_else(|_| unreachable!("bundled Apple Root certificate is valid"))
+	}
+
+	/// *Worldwide Developer Relations* Apple certificates
+	#[must_use]
+	pub fn apple_wwdr_g4() -> X509 {
+		X509::from_der(APPLE_WWDR_G4)
 			.unwrap_or_else(|_| unreachable!("bundled Apple WWDR G4 certificate is valid"))
 	}
 
 	#[test]
-	fn g4_cert_valid() {
-		let _ = g4();
+	fn apple_root_cert_valid() {
+		let _ = apple_root();
+	}
+
+	#[test]
+	fn apple_wwdr_g4_cert_valid() {
+		let _ = apple_wwdr_g4();
 	}
 }

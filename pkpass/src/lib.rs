@@ -1,46 +1,50 @@
 //! pkpass
 
-use models::{
-	fields::PassKind,
-	manifest::{AssetTable, Manifest},
-	ColorTheme, Pass,
+use crate::{
+	models::{
+		fields::PassKind,
+		manifest::{Assets, Manifest},
+		ColorTheme, Metadata,
+	},
+	sign::{certificates, Identity, VerifyMode},
 };
 use openssl::{
 	pkcs7::{Pkcs7, Pkcs7Flags},
 	stack::Stack,
-	x509::store::X509StoreBuilder,
+	x509::{store::X509StoreBuilder, X509PurposeId},
 };
-use sign::{wwdr, Identity};
 use std::{
-	collections::HashMap,
 	io::{self, Read, Seek, Write},
-	str::FromStr,
+	mem,
 };
 use zip::{result::ZipError, write::SimpleFileOptions, ZipArchive};
-
-use crate::models::manifest::{AssetContent, AssetType};
 
 pub mod models;
 pub mod sign;
 
 #[derive(Debug)]
-pub struct PkPass {
-	pub pass: Pass,
-	pub assets: AssetTable,
+pub struct Pass {
+	pub metadata: Metadata,
+	pub assets: Assets,
 }
 
-impl PkPass {
+impl Pass {
 	#[must_use]
-	pub fn new(description: String, serial_number: String, kind: PassKind) -> Self {
+	pub fn new(
+		organization_name: String,
+		description: String,
+		serial_number: String,
+		kind: PassKind,
+	) -> Self {
 		Self {
-			pass: Pass {
+			metadata: Metadata {
 				format_version: 1,
 
-				// TODO: ugly
-				organization_name: String::new(),
+				// this will be filled by identity later
 				pass_type_identifier: String::new(),
 				team_identifier: String::new(),
 
+				organization_name,
 				description,
 				serial_number,
 
@@ -68,12 +72,11 @@ impl PkPass {
 				web_service_url: None,
 				authentication_token: None,
 			},
-			assets: HashMap::default(),
+			assets: Assets::default(),
 		}
 	}
 
-	// TODO: should indeed valitate pass
-	pub fn read<R: Read + Seek>(reader: R) -> io::Result<Self> {
+	pub fn read<R: Read + Seek>(reader: R, verify: VerifyMode) -> io::Result<Self> {
 		let mut zip = ZipArchive::new(reader)?;
 
 		let signature = match zip.by_name("signature") {
@@ -97,27 +100,31 @@ impl PkPass {
 			Err(e) => return Err(e.into()),
 		};
 
-		if let Some(sig) = signature {
-			let stack = Stack::new()?;
+		if verify == VerifyMode::Yes {
+			if let Some(sig) = signature {
+				let stack = Stack::new()?;
 
-			let mut store = X509StoreBuilder::new()?;
-			store.add_cert(wwdr::g4())?;
-			let store = store.build();
+				let store = {
+					let mut store = X509StoreBuilder::new()?;
+					store.add_cert(certificates::apple_root())?;
+					store.add_cert(certificates::apple_wwdr_g4())?;
+					store.set_purpose(X509PurposeId::ANY)?;
+					store.build()
+				};
 
-			// TODO: fking understand and properly validate sig
-			let _ = sig.verify(&stack, &store, Some(&manifest), None, Pkcs7Flags::empty());
+				sig.verify(&stack, &store, Some(&manifest), None, Pkcs7Flags::empty())?;
+			}
 		}
 
 		let manifest: Manifest = serde_json::from_slice(&manifest)?;
 
-		// TODO: verify manifest based on sig
-		let pass: models::Pass = match zip.by_name("pass.json") {
+		let pass: models::Metadata = match zip.by_name("pass.json") {
 			Ok(file) => serde_json::from_reader(file)?,
 			Err(ZipError::FileNotFound) => todo!(),
 			Err(e) => return Err(e.into()),
 		};
 
-		let mut assets = HashMap::new();
+		let mut assets = Assets::default();
 
 		for item in 0..zip.len() {
 			let mut item = zip.by_index(item)?;
@@ -129,22 +136,34 @@ impl PkPass {
 				continue;
 			}
 
-			let item_kind = AssetType::from_str(item.name()).unwrap();
-
 			let mut data = vec![];
 			item.read_to_end(&mut data)?;
 
-			assert!(manifest.verify_file(item.name(), &data));
+			// first check if asset is a valid one
+			let asset = assets.get_mut(item.name())?;
 
-			assets.insert(item_kind, AssetContent::new(data));
+			if !manifest.verify_file(item.name(), &data) {
+				return Err(io::Error::new(
+					io::ErrorKind::InvalidInput,
+					format!(
+						"asset `{}` in archive does not match its signature in manifest.json",
+						item.name()
+					),
+				));
+			}
+
+			let _ = mem::replace(asset, data);
 		}
 
-		Ok(Self { pass, assets })
+		Ok(Self {
+			metadata: pass,
+			assets,
+		})
 	}
 
 	pub fn write<W: Write + Seek>(&mut self, identity: Identity, writer: W) -> io::Result<()> {
-		self.pass.team_identifier = identity.team_id;
-		self.pass.pass_type_identifier = identity.pass_type_id;
+		self.metadata.team_identifier = identity.team_id;
+		self.metadata.pass_type_identifier = identity.pass_type_id;
 		// ---ugly---
 
 		let mut manifest = Manifest::default();
@@ -153,13 +172,12 @@ impl PkPass {
 		let options =
 			SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
-		let pass_data = serde_json::to_vec(&self.pass)?;
+		let pass_data = serde_json::to_vec(&self.metadata)?;
 		manifest.add_file("pass.json", &pass_data);
 		zip.start_file("pass.json", options)?;
 		zip.write_all(&pass_data)?;
 
-		for (asset_kind, asset_content) in &self.assets {
-			let asset_path = asset_kind.to_string();
+		for (asset_path, asset_content) in self.assets.paths() {
 			manifest.add_file(&asset_path, asset_content);
 			zip.start_file(asset_path, options)?;
 			zip.write_all(asset_content)?;

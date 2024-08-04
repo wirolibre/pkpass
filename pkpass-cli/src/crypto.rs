@@ -1,5 +1,5 @@
 use openssl::{nid::Nid, pkcs12::Pkcs12, pkey::PKey, rsa::Rsa, stack::Stack, x509::X509};
-use pkpass::sign::wwdr;
+use pkpass::sign::certificates;
 use rcgen::CertificateParams;
 use std::{fs, path::PathBuf};
 
@@ -104,7 +104,7 @@ impl Exec for BundleCertArgs {
 		let cert = X509::from_der(&cert)?;
 
 		let mut chain = Stack::new()?;
-		chain.push(wwdr::g4())?;
+		chain.push(certificates::apple_wwdr_g4())?;
 
 		let p12 = {
 			let mut p12 = Pkcs12::builder();
