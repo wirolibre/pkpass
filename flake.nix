@@ -52,8 +52,9 @@
               rust-toolchain
               act
 
-              cargo-workspaces
               cargo-expand
+              cargo-semver-checks
+              cargo-workspaces
               unzip
             ];
             buildInputs = with pkgs; [

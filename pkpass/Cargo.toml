@@ -3,10 +3,15 @@ lints.workspace = true
 [package]
 name = "pkpass"
 version = "0.1.0"
-edition = "2021"
+
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [dependencies]
-chrono = { version = "0.4.38", features = ["serde"] }
+chrono = { version = "0.4.38", features = ["serde", "unstable-locales"] }
 hex = "0.4.3"
 openssl = "0.10.64"
 serde = "1.0.204"

@@ -1,11 +1,7 @@
 //! pkpass
 
 use crate::{
-	models::{
-		fields::PassKind,
-		manifest::{Assets, Manifest},
-		ColorTheme, Metadata,
-	},
+	models::{Assets, ColorTheme, Manifest, Metadata, PassKind},
 	sign::{certificates, Identity, VerifyMode},
 };
 use openssl::{
@@ -14,13 +10,16 @@ use openssl::{
 	x509::{store::X509StoreBuilder, X509PurposeId},
 };
 use std::{
-	io::{self, Read, Seek, Write},
+	io::{Read, Seek, Write},
 	mem,
 };
 use zip::{result::ZipError, write::SimpleFileOptions, ZipArchive};
 
+mod error;
 pub mod models;
 pub mod sign;
+
+pub use error::{Error, Result};
 
 #[derive(Debug)]
 pub struct Pass {
@@ -28,19 +27,29 @@ pub struct Pass {
 	pub assets: Assets,
 }
 
+#[derive(Debug)]
+pub struct PassConfig {
+	pub organization_name: String,
+	pub description: String,
+	pub serial_number: String,
+	pub kind: PassKind,
+}
+
 impl Pass {
 	#[must_use]
 	pub fn new(
-		organization_name: String,
-		description: String,
-		serial_number: String,
-		kind: PassKind,
+		PassConfig {
+			organization_name,
+			description,
+			serial_number,
+			kind,
+		}: PassConfig,
 	) -> Self {
 		Self {
 			metadata: Metadata {
 				format_version: 1,
 
-				// this will be filled by identity later
+				// TODO: not very clean, is filled later during signing
 				pass_type_identifier: String::new(),
 				team_identifier: String::new(),
 
@@ -76,7 +85,7 @@ impl Pass {
 		}
 	}
 
-	pub fn read<R: Read + Seek>(reader: R, verify: VerifyMode) -> io::Result<Self> {
+	pub fn read<R: Read + Seek>(reader: R, verify: VerifyMode) -> Result<Self> {
 		let mut zip = ZipArchive::new(reader)?;
 
 		let signature = match zip.by_name("signature") {
@@ -118,7 +127,7 @@ impl Pass {
 
 		let manifest: Manifest = serde_json::from_slice(&manifest)?;
 
-		let pass: models::Metadata = match zip.by_name("pass.json") {
+		let metadata: Metadata = match zip.by_name("pass.json") {
 			Ok(file) => serde_json::from_reader(file)?,
 			Err(ZipError::FileNotFound) => todo!(),
 			Err(e) => return Err(e.into()),
@@ -143,27 +152,18 @@ impl Pass {
 			let asset = assets.get_mut(item.name())?;
 
 			if !manifest.verify_file(item.name(), &data) {
-				return Err(io::Error::new(
-					io::ErrorKind::InvalidInput,
-					format!(
-						"asset `{}` in archive does not match its signature in manifest.json",
-						item.name()
-					),
-				));
+				return Err(Error::ManifestSignatureMismatch(item.name().into()));
 			}
 
 			let _ = mem::replace(asset, data);
 		}
 
-		Ok(Self {
-			metadata: pass,
-			assets,
-		})
+		Ok(Self { metadata, assets })
 	}
 
-	pub fn write<W: Write + Seek>(&mut self, identity: Identity, writer: W) -> io::Result<()> {
-		self.metadata.team_identifier = identity.team_id;
+	pub fn write<W: Write + Seek>(&mut self, identity: Identity, writer: W) -> Result<()> {
 		self.metadata.pass_type_identifier = identity.pass_type_id;
+		self.metadata.team_identifier = identity.team_id;
 		// ---ugly---
 
 		let mut manifest = Manifest::default();
@@ -187,7 +187,7 @@ impl Pass {
 		zip.start_file("manifest.json", options)?;
 		zip.write_all(&manifest_data)?;
 
-		if let Some(pen) = identity.pen {
+		if let Some(pen) = &identity.pen {
 			let signature = Pkcs7::sign(
 				&pen.signer_certificate,
 				&pen.signer_private_key,

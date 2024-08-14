@@ -3,8 +3,13 @@ lints.workspace = true
 [package]
 name = "pkpass-cli"
 version = "0.1.0"
-edition = "2021"
 default-run = "pkpass"
+
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [[bin]]
 name = "pkpass"

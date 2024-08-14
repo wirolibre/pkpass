@@ -366,7 +366,7 @@ pub struct SemanticTags {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub venue_room: Option<String>,
 
-	/// An array of objects that represent the WiFi networks associated with the event; for example, the network name and password associated with a developer conference.
+	/// An array of objects that represent the `WiFi` networks associated with the event; for example, the network name and password associated with a developer conference.
 	///
 	/// Use this key for any type of pass.
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -432,10 +432,10 @@ pub struct SemanticTagPersonNameComponents {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct SemanticTagWifiNetwork {
-	/// (Required) The password for the WiFi network.
+	/// The password for the `WiFi` network.
 	pub password: f64,
 
-	/// (Required) The name for the WiFi network.
+	/// The name for the `WiFi` network.
 	pub ssid: f64,
 }
 

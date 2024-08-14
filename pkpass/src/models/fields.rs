@@ -14,7 +14,7 @@ pub enum PassKind {
 /// <https://developer.apple.com/documentation/walletpasses/passfields>
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct PassFields {
+pub struct Fields {
 	#[serde(rename = "headerFields")]
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub header: Vec<Field>,
@@ -41,7 +41,7 @@ pub struct PassFields {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct BoardingPass {
 	#[serde(flatten)]
-	pub fields: PassFields,
+	pub fields: Fields,
 
 	/// The type of transit for a boarding pass. This key is invalid for other types of passes.
 	pub transit_type: TransitType,
@@ -52,7 +52,7 @@ pub struct BoardingPass {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Coupon {
 	#[serde(flatten)]
-	pub fields: PassFields,
+	pub fields: Fields,
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
@@ -60,7 +60,7 @@ pub struct Coupon {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EventTicket {
 	#[serde(flatten)]
-	pub fields: PassFields,
+	pub fields: Fields,
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
@@ -68,7 +68,7 @@ pub struct EventTicket {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Generic {
 	#[serde(flatten)]
-	pub fields: PassFields,
+	pub fields: Fields,
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
@@ -76,7 +76,7 @@ pub struct Generic {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct StoreCard {
 	#[serde(flatten)]
-	pub fields: PassFields,
+	pub fields: Fields,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
