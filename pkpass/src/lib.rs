@@ -1,7 +1,7 @@
 //! pkpass
 
 use crate::{
-	models::{Assets, ColorTheme, Manifest, Metadata, PassKind},
+	models::{spec, Assets, ColorTheme, Manifest, Metadata, PassKind},
 	sign::{certificates, Identity, VerifyMode},
 };
 use openssl::{
@@ -128,7 +128,7 @@ impl Pass {
 		let manifest: Manifest = serde_json::from_slice(&manifest)?;
 
 		let metadata: Metadata = match zip.by_name("pass.json") {
-			Ok(file) => serde_json::from_reader(file)?,
+			Ok(file) => serde_json::from_reader::<_, spec::Metadata>(file)?.into(),
 			Err(ZipError::FileNotFound) => todo!(),
 			Err(e) => return Err(e.into()),
 		};
@@ -172,7 +172,7 @@ impl Pass {
 		let options =
 			SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
-		let pass_data = serde_json::to_vec(&self.metadata)?;
+		let pass_data = serde_json::to_vec::<spec::Metadata>(&self.metadata.clone().into())?;
 		manifest.add_file("pass.json", &pass_data);
 		zip.start_file("pass.json", options)?;
 		zip.write_all(&pass_data)?;
@@ -183,7 +183,7 @@ impl Pass {
 			zip.write_all(asset_content)?;
 		}
 
-		let manifest_data = serde_json::to_vec(&manifest)?;
+		let manifest_data = serde_json::to_vec::<Manifest>(&manifest)?;
 		zip.start_file("manifest.json", options)?;
 		zip.write_all(&manifest_data)?;
 

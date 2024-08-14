@@ -11,6 +11,8 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+pkpass-macros.workspace = true
+
 chrono = { version = "0.4.38", features = ["serde", "unstable-locales"] }
 hex = "0.4.3"
 openssl = "0.10.64"
