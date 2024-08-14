@@ -6,6 +6,13 @@ members = [
   "pkpass-server",
 ]
 
+[workspace.package]
+authors = ["Milo Moisson"]
+edition = "2021"
+license = "CECILL"
+repository = "https://github.com/wirolibre/pkpass"
+rust-version = "1.77"
+
 [workspace.dependencies]
 pkpass = { path = "pkpass" }
 
@@ -20,4 +27,5 @@ nursery = { level = "warn", priority = -1 }
 expect_used = "warn"
 # missing_docs_in_private_items = "warn"
 print_literal = "warn"
+redundant_pub_crate = "allow"
 unwrap_used = "warn"

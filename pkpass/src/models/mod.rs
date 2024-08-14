@@ -8,11 +8,12 @@ use std::{
 use url::Url;
 use yansi::Painted;
 
-use self::{fields::PassKind, semantics::SemanticTags};
-
-pub mod fields;
-pub mod manifest;
-pub mod semantics;
+mod fields;
+mod manifest;
+mod semantics;
+pub use fields::*;
+pub use manifest::*;
+pub use semantics::*;
 
 /// Represent the `pass.json` file content
 ///
@@ -341,7 +342,7 @@ pub struct Location {
 // TODO: not Strings
 pub struct Nfc {
 	/// The public encryption key the Value Added Services protocol uses. Use a
-	/// Base64-encoded X.509 SubjectPublicKeyInfo structure that contains an
+	/// Base64-encoded X.509 `SubjectPublicKeyInfo` structure that contains an
 	/// ECDH public key for group P256.
 	encryption_public_key: String,
 

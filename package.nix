@@ -2,28 +2,38 @@
 
 , rustPlatform
 , gitignore
+
+, pkg-config
+, openssl
 }:
 
 let
   inherit (gitignore.lib) gitignoreSource;
 
   src = gitignoreSource ./.;
-  cargoTOML = lib.importTOML "${src}/Cargo.toml";
+  manifest = lib.importTOML "${src}/Cargo.toml";
+
+  pkg-info = manifest.workspace.package;
 in
 rustPlatform.buildRustPackage {
-  pname = cargoTOML.package.name;
-  version = cargoTOML.package.version;
+  pname = "pkpass";
+  version = "0.1.0";
 
   inherit src;
 
   cargoLock = { lockFile = "${src}/Cargo.lock"; };
 
-  nativeBuildInputs = [ ];
-  buildInputs = [ ];
+  nativeBuildInputs = [
+    pkg-config
+  ];
+  buildInputs = [
+    openssl
+  ];
 
   meta = {
-    inherit (cargoTOML.package) description homepage license;
-    maintainers = cargoTOML.package.authors;
-    mainProgram = "app";
+    inherit (pkg-info) homepage license;
+    description = "pkpass file format toolchain";
+    maintainers = pkg-info.authors;
+    mainProgram = "pkpass";
   };
 }
