@@ -7,31 +7,31 @@ mod spec;
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
 /// #[pkpass_derive::spec]
 /// mod _dummy {
 ///   /// bla, bla, desc
-///   #[derive(Debug, Derserialize, Serialize)]
+///   #[derive(Debug, Deserialize, Serialize)]
 ///   struct Pass {
 ///     #[serde(default, skip_serializing_if = "...")]
 ///     #[spec(fieldName)]
-///     field: Type,
+///     field_name: Type,
 ///   }
 /// }
 /// ```
 ///
 /// get expanded to:
 ///
-/// ```
+/// ```ignore
 /// /// bla, bla, desc
-/// #[derive(Debug, Derserialize, Serialize)]
+/// #[derive(Debug, Deserialize, Serialize)]
 /// struct Pass {
 ///   #[serde(default, skip_serializing_if = "...")]
-///   field: Type
+///   field_name: Type
 /// }
 ///
 /// mod spec {
-///   #[derive(Derserialize, Serialize)]
+///   #[derive(Deserialize, Serialize)]
 ///   struct Pass {
 ///     #[serde(default, skip_serializing_if = "...")]
 ///     #[serde(rename = "fieldName")]

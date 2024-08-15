@@ -73,11 +73,13 @@ fn process_items(
 			syn::Item::Struct(struct_) => {
 				let model = Model::new(struct_);
 				lib_items.push(model.clone().into_lib_item()?);
+				spec_items.extend(model.conversion_items());
 				spec_items.push(model.into_spec_item()?);
 			}
 			syn::Item::Enum(enum_) => {
 				let union = Union::new(enum_);
 				lib_items.push(union.clone().into_lib_item()?);
+				spec_items.extend(union.conversion_items());
 				spec_items.push(union.into_spec_item()?);
 			}
 
@@ -116,19 +118,17 @@ impl Model {
 		let attrs = self.struct_.attrs.drain(..).collect::<Vec<_>>();
 		for attr in attrs {
 			match &attr.meta {
-				syn::Meta::NameValue(name_value)
-					if name_value.path.get_ident().unwrap() == "doc" =>
-				{
+				syn::Meta::NameValue(name_value) if name_value.path.is_ident("doc") => {
 					self.struct_.attrs.push(attr);
 				}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "spec" => {}
+				syn::Meta::List(list) if list.path.is_ident("spec") => {}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "serde" => {
+				syn::Meta::List(list) if list.path.is_ident("serde") => {
 					self.struct_.attrs.push(attr);
 				}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "derive" => {
+				syn::Meta::List(list) if list.path.is_ident("derive") => {
 					self.struct_.attrs.push(attr);
 				}
 
@@ -140,15 +140,13 @@ impl Model {
 			let field_attrs = field.attrs.drain(..).collect::<Vec<_>>();
 			for field_attr in field_attrs {
 				match &field_attr.meta {
-					syn::Meta::NameValue(name_value)
-						if name_value.path.get_ident().unwrap() == "doc" =>
-					{
+					syn::Meta::NameValue(name_value) if name_value.path.is_ident("doc") => {
 						field.attrs.push(field_attr);
 					}
 
-					syn::Meta::List(list) if list.path.get_ident().unwrap() == "spec" => {}
+					syn::Meta::List(list) if list.path.is_ident("spec") => {}
 
-					syn::Meta::List(list) if list.path.get_ident().unwrap() == "serde" => {
+					syn::Meta::List(list) if list.path.is_ident("serde") => {
 						field.attrs.push(field_attr.clone());
 					}
 
@@ -166,15 +164,13 @@ impl Model {
 		let attrs = self.struct_.attrs.drain(..).collect::<Vec<_>>();
 		for attr in attrs {
 			match &attr.meta {
-				syn::Meta::NameValue(name_value)
-					if name_value.path.get_ident().unwrap() == "doc" =>
-				{
+				syn::Meta::NameValue(name_value) if name_value.path.is_ident("doc") => {
 					// Don't need to document spec items
 				}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "spec" => {
+				syn::Meta::List(list) if list.path.is_ident("spec") => {
 					list.parse_nested_meta(|meta| {
-						if meta.path.get_ident().unwrap() == "pub" {
+						if meta.path.is_ident("pub") {
 							self.struct_.vis =
 								Visibility::Public((syn::Token![pub])(Span::mixed_site()));
 						}
@@ -183,13 +179,13 @@ impl Model {
 					})?;
 				}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "serde" => {
+				syn::Meta::List(list) if list.path.is_ident("serde") => {
 					// TODO: check for presence of serde `rename_all`
 
 					self.struct_.attrs.push(attr.clone());
 				}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "derive" => {
+				syn::Meta::List(list) if list.path.is_ident("derive") => {
 					let mut derives = vec![];
 
 					list.parse_nested_meta(|meta| {
@@ -215,13 +211,11 @@ impl Model {
 			let field_attrs = field.attrs.drain(..).collect::<Vec<_>>();
 			for field_attr in field_attrs {
 				match &field_attr.meta {
-					syn::Meta::NameValue(name_value)
-						if name_value.path.get_ident().unwrap() == "doc" =>
-					{
+					syn::Meta::NameValue(name_value) if name_value.path.is_ident("doc") => {
 						// Don't need to document spec items
 					}
 
-					syn::Meta::List(list) if list.path.get_ident().unwrap() == "spec" => {
+					syn::Meta::List(list) if list.path.is_ident("spec") => {
 						list.parse_nested_meta(|meta| {
 							let key = meta.path.get_ident().unwrap();
 							let key = LitStr::new(&key.to_string(), Span::call_site());
@@ -230,7 +224,7 @@ impl Model {
 						})?;
 					}
 
-					syn::Meta::List(list) if list.path.get_ident().unwrap() == "serde" => {
+					syn::Meta::List(list) if list.path.is_ident("serde") => {
 						// TODO: check for presence of serde `rename`
 
 						field.attrs.push(field_attr.clone());
@@ -242,6 +236,39 @@ impl Model {
 		}
 
 		Ok(syn::Item::Struct(self.struct_))
+	}
+
+	fn conversion_items(&self) -> [syn::Item; 2] {
+		let model_ident = self.struct_.ident.clone();
+		let from_idents: Vec<_> = self
+			.struct_
+			.fields
+			.iter()
+			.map(|field| field.ident.clone())
+			.collect();
+		let into_idents = from_idents.clone();
+
+		let from_impl: syn::ItemImpl = parse_quote! {
+			impl From<#model_ident> for super::#model_ident {
+				fn from(this: #model_ident) -> Self {
+					Self {
+						#(#from_idents: this.#from_idents.into()),*
+					}
+				}
+			}
+		};
+
+		let into_impl: syn::ItemImpl = parse_quote! {
+			impl From<super::#model_ident> for #model_ident {
+				fn from(this: super::#model_ident) -> Self {
+					Self {
+						#(#into_idents: this.#into_idents.into()),*
+					}
+				}
+			}
+		};
+
+		[syn::Item::Impl(from_impl), syn::Item::Impl(into_impl)]
 	}
 }
 
@@ -259,19 +286,17 @@ impl Union {
 		let attrs = self.enum_.attrs.drain(..).collect::<Vec<_>>();
 		for attr in attrs {
 			match &attr.meta {
-				syn::Meta::NameValue(name_value)
-					if name_value.path.get_ident().unwrap() == "doc" =>
-				{
+				syn::Meta::NameValue(name_value) if name_value.path.is_ident("doc") => {
 					self.enum_.attrs.push(attr);
 				}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "spec" => {}
+				syn::Meta::List(list) if list.path.is_ident("spec") => {}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "serde" => {
+				syn::Meta::List(list) if list.path.is_ident("serde") => {
 					self.enum_.attrs.push(attr);
 				}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "derive" => {
+				syn::Meta::List(list) if list.path.is_ident("derive") => {
 					self.enum_.attrs.push(attr);
 				}
 
@@ -288,15 +313,13 @@ impl Union {
 		let attrs = self.enum_.attrs.drain(..).collect::<Vec<_>>();
 		for attr in attrs {
 			match &attr.meta {
-				syn::Meta::NameValue(name_value)
-					if name_value.path.get_ident().unwrap() == "doc" =>
-				{
+				syn::Meta::NameValue(name_value) if name_value.path.is_ident("doc") => {
 					// Don't need to document spec items
 				}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "spec" => {
+				syn::Meta::List(list) if list.path.is_ident("spec") => {
 					list.parse_nested_meta(|meta| {
-						if meta.path.get_ident().unwrap() == "pub" {
+						if meta.path.is_ident("pub") {
 							self.enum_.vis =
 								Visibility::Public((syn::Token![pub])(Span::mixed_site()));
 						}
@@ -305,13 +328,13 @@ impl Union {
 					})?;
 				}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "serde" => {
+				syn::Meta::List(list) if list.path.is_ident("serde") => {
 					// TODO: check for presence of serde `rename_all`
 
 					self.enum_.attrs.push(attr.clone());
 				}
 
-				syn::Meta::List(list) if list.path.get_ident().unwrap() == "derive" => {
+				syn::Meta::List(list) if list.path.is_ident("derive") => {
 					let mut derives = vec![];
 
 					list.parse_nested_meta(|meta| {
@@ -332,5 +355,33 @@ impl Union {
 		}
 
 		Ok(syn::Item::Enum(self.enum_))
+	}
+
+	fn conversion_items(&self) -> [syn::Item; 2] {
+		let union_ident = self.enum_.ident.clone();
+		let from_variants = self.enum_.variants.iter().map(|field| field.ident.clone());
+		let into_variants = from_variants.clone();
+
+		let from_impl: syn::ItemImpl = parse_quote! {
+			impl From<#union_ident> for super::#union_ident {
+				fn from(this: #union_ident) -> Self {
+					match this {
+						#(#union_ident::#from_variants => Self::#from_variants),*
+					}
+				}
+			}
+		};
+
+		let into_impl: syn::ItemImpl = parse_quote! {
+			impl From<super::#union_ident> for #union_ident  {
+				fn from(this: super::#union_ident) -> Self {
+					match this {
+						#(super::#union_ident::#into_variants => Self::#into_variants),*
+					}
+				}
+			}
+		};
+
+		[syn::Item::Impl(from_impl), syn::Item::Impl(into_impl)]
 	}
 }

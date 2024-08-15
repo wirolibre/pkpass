@@ -17,18 +17,6 @@ pub use semantics::*;
 
 // GUIDELINES: users can interact with `transparent::*`
 
-impl From<Metadata> for spec::Metadata {
-	fn from(_: Metadata) -> Self {
-		todo!("impl in macro")
-	}
-}
-
-impl From<spec::Metadata> for Metadata {
-	fn from(_: spec::Metadata) -> Self {
-		todo!("impl in macro")
-	}
-}
-
 #[pkpass_macros::spec]
 mod transparent {
 	use serde::{Deserialize, Serialize};
@@ -189,35 +177,49 @@ mod transparent {
 	}
 
 	#[derive(Clone)]
-	pub struct RgbColor(pub u8, pub u8, pub u8);
+	pub struct RgbColor {
+		pub red: u8,
+		pub green: u8,
+		pub blue: u8,
+	}
 
 	impl RgbColor {
 		#[must_use]
+		pub const fn new(red: u8, green: u8, blue: u8) -> Self {
+			Self { red, green, blue }
+		}
+
+		#[must_use]
 		pub const fn white() -> Self {
-			Self(255, 255, 255)
+			Self::new(255, 255, 255)
 		}
 
 		#[must_use]
 		pub const fn black() -> Self {
-			Self(0, 0, 0)
+			Self::new(0, 0, 0)
+		}
+	}
+
+	impl Into<yansi::Color> for RgbColor {
+		fn into(self) -> yansi::Color {
+			yansi::Color::Rgb(self.red, self.green, self.blue)
 		}
 	}
 
 	impl std::fmt::Debug for RgbColor {
 		fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-			let color =
-				yansi::Painted::new("        ").bg(yansi::Color::Rgb(self.0, self.1, self.2));
+			let color = yansi::Painted::new("   ").bg(self.clone().into());
 			write!(
 				f,
-				"Color(r: {}, g: {}, b: {} {})",
-				self.0, self.1, self.2, color
+				"Color({}, {}, {}; {})",
+				self.red, self.green, self.blue, color
 			)
 		}
 	}
 
 	impl Serialize for RgbColor {
 		fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-			let color = format!("rgb({},{},{})", self.0, self.1, self.2);
+			let color = format!("rgb({},{},{})", self.red, self.green, self.blue);
 			color.serialize(serializer)
 		}
 	}
@@ -241,7 +243,7 @@ mod transparent {
 				let blue = vec.next().unwrap().unwrap();
 				assert!(vec.next().is_none());
 
-				Self(red, green, blue)
+				Self { red, green, blue }
 			};
 
 			Ok(parsed)
