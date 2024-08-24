@@ -1,6 +1,6 @@
 use openssl::pkcs12::Pkcs12;
 use pkpass::{
-	models::{EventTicket, Fields, PassKind},
+	models::{Fields, PassKind},
 	sign::{Identity, SigningPen},
 	Pass, PassConfig,
 };
@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		organization_name: "Acme Inc.".into(),
 		description: "A custom pass to try out my library".into(),
 		serial_number: Uuid::new_v4().as_simple().to_string(),
-		kind: PassKind::EventTicket(EventTicket { fields }),
+		kind: PassKind::EventTicket(fields),
 	});
 
 	let Pass { assets, .. } = &mut pass;

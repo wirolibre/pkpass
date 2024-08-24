@@ -1,7 +1,7 @@
 //! pkpass
 
 use crate::{
-	models::{Assets, ColorTheme, Manifest, Metadata, PassKind},
+	models::{Assets, Manifest, Metadata, PassKind},
 	sign::{certificates, Identity, VerifyMode},
 };
 use openssl::{
@@ -16,9 +16,10 @@ use std::{
 use zip::{result::ZipError, write::SimpleFileOptions, ZipArchive};
 
 mod error;
+
 pub mod models;
 pub mod sign;
-
+pub mod template;
 pub use error::{Error, Result};
 
 #[derive(Debug, Clone)]
@@ -35,6 +36,7 @@ pub struct PassConfig {
 	pub kind: PassKind,
 }
 
+/// Pass creation
 impl Pass {
 	#[must_use]
 	pub fn new(
@@ -57,8 +59,10 @@ impl Pass {
 				description,
 				serial_number,
 
-				color_theme: ColorTheme::default(),
-				kind,
+				// kind,
+				foreground_color: None,
+				label_color: None,
+				background_color: None,
 
 				app_launch_url: None,
 				associated_store_identifiers: Vec::default(),
@@ -85,7 +89,14 @@ impl Pass {
 		}
 	}
 
-	pub fn read<R: Read + Seek>(reader: R, verify: VerifyMode) -> Result<Self> {
+	pub(crate) const fn from_raw_parts(metadata: Metadata, assets: Assets) -> Self {
+		Self { metadata, assets }
+	}
+}
+
+/// Reading and writing
+impl Pass {
+	pub fn read(reader: impl Read + Seek, verify: VerifyMode) -> Result<Self> {
 		let mut zip = ZipArchive::new(reader)?;
 
 		let signature = match zip.by_name("signature") {
@@ -161,8 +172,24 @@ impl Pass {
 		Ok(Self { metadata, assets })
 	}
 
-	pub fn write<W: Write + Seek>(&self, identity: Identity, writer: W) -> Result<()> {
-		// no cloning nor mutation should happen here
+	/// Bundle a pass to a `pkpass` file.
+	///
+	/// ```ignore
+	/// # fn main() ->
+	/// let pass = Pass::new(PassConfig { ... });
+	/// let identity = Identity::new_no_signature(...);
+	///
+	/// let file = fs::OpenOptions::new()
+	///     .write(true)
+	///     .create(true)
+	///     .truncate(true)
+	///     .open("custom.pkpass")?;
+	///
+	/// pass.write(identity, file)?;
+	/// # Ok(())}
+	/// ```
+	pub fn write(&self, identity: Identity, writer: impl Write + Seek) -> Result<()> {
+		// TODO: no cloning nor mutation should happen here
 		let mut metadata = self.metadata.clone();
 		metadata.pass_type_identifier = identity.pass_type_id;
 		metadata.team_identifier = identity.team_id;

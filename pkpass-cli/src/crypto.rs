@@ -5,7 +5,7 @@ use std::{fs, path::PathBuf};
 
 use crate::Exec;
 
-/// Multiple helpers to help generate a signing certificate for pkpasses
+/// Multiple helpers to help generate a signing certificate for wallet passes
 #[derive(clap::Subcommand)]
 pub(crate) enum Command {
 	// TODO: would be nice to generate Ed25516 keys but couldn't make Apple

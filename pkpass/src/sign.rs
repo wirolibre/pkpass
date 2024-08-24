@@ -9,12 +9,21 @@ use std::{fmt, io, str::FromStr};
 
 #[derive(Debug)]
 pub struct Identity {
-	pub(crate) pen: Option<SigningPen>,
 	pub(crate) pass_type_id: String,
 	pub(crate) team_id: String,
+	pub(crate) pen: Option<SigningPen>,
 }
 
 impl Identity {
+	#[must_use]
+	pub const fn new_no_signature(pass_type_id: String, team_id: String) -> Self {
+		Self {
+			pass_type_id,
+			team_id,
+			pen: None,
+		}
+	}
+
 	pub fn from_apple_pen(pen: SigningPen) -> io::Result<Self> {
 		let name = pen.signer_certificate.subject_name();
 
@@ -37,9 +46,9 @@ impl Identity {
 		})?;
 
 		Ok(Self {
-			pen: Some(pen),
 			pass_type_id,
 			team_id,
+			pen: Some(pen),
 		})
 	}
 }

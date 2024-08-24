@@ -8,7 +8,10 @@ use std::{
 use url::Url;
 use yansi::Painted;
 
+// TODO: make a prelude
+
 mod fields;
+mod impls;
 mod manifest;
 mod semantics;
 pub use fields::*;
@@ -38,8 +41,20 @@ pub struct Metadata {
 	/// An alphanumeric serial number. The combination of the serial number and pass type identifier must be unique for each pass.
 	pub(crate) serial_number: String,
 
-	#[serde(flatten)]
-	pub color_theme: ColorTheme,
+	// TODO: rename all to `color_<part>`?
+	/// A foreground color for the pass, specified as a CSS-style RGB triple, such as rgb(100, 10, 110).
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub foreground_color: Option<RgbColor>,
+
+	/// A color for the label text of the pass, specified as a CSS-style RGB
+	/// triple, such as rgb(100, 10, 110). If you don’t provide a value, the
+	/// system determines the label color.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub label_color: Option<RgbColor>,
+
+	/// A background color for the pass, specified as a CSS-style RGB triple, such as `rgb(23, 187, 82)`.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub background_color: Option<RgbColor>,
 
 	#[serde(flatten)]
 	pub(crate) kind: PassKind,
@@ -145,24 +160,6 @@ pub struct Metadata {
 	pub authentication_token: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct ColorTheme {
-	/// A foreground color for the pass, specified as a CSS-style RGB triple, such as rgb(100, 10, 110).
-	#[serde(rename = "foregroundColor", skip_serializing_if = "Option::is_none")]
-	pub foreground: Option<RgbColor>,
-
-	/// A color for the label text of the pass, specified as a CSS-style RGB
-	/// triple, such as rgb(100, 10, 110). If you don’t provide a value, the
-	/// system determines the label color.
-	#[serde(rename = "labelColor", skip_serializing_if = "Option::is_none")]
-	pub label: Option<RgbColor>,
-
-	/// A background color for the pass, specified as a CSS-style RGB triple, such as `rgb(23, 187, 82)`.
-	#[serde(rename = "backgroundColor", skip_serializing_if = "Option::is_none")]
-	pub background: Option<RgbColor>,
-}
-
 #[derive(Clone)]
 pub struct RgbColor(pub u8, pub u8, pub u8);
 
@@ -197,7 +194,7 @@ impl Serialize for RgbColor {
 }
 
 impl FromStr for RgbColor {
-	type Err = ();
+	type Err = &'static str;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		match s.get(0..=0) {
@@ -207,17 +204,29 @@ impl FromStr for RgbColor {
 					.strip_prefix("rgb(")
 					.and_then(|s| s.strip_suffix(')'))
 					.map(|s| s.split(','))
-					.unwrap();
+					.ok_or("could not split on `,`")?;
 
 				let mut vec = s.map(str::trim).map(str::parse);
 				// TODO: error handling
-				let red = vec.next().unwrap().unwrap();
-				let green = vec.next().unwrap().unwrap();
-				let blue = vec.next().unwrap().unwrap();
-				assert!(vec.next().is_none());
+				let red = vec
+					.next()
+					.ok_or("no red color")?
+					.map_err(|_| "could not parse red color")?;
+				let green = vec
+					.next()
+					.ok_or("no green color")?
+					.map_err(|_| "could not parse green color")?;
+				let blue = vec
+					.next()
+					.ok_or("no blue color")?
+					.map_err(|_| "could not parse blue color")?;
+				if vec.next().is_some() {
+					return Err("rgb only has 3 colors");
+				};
 
 				Ok(Self(red, green, blue))
 			}
+			// TODO: remove, move to future fault tolerant pkpass parser
 			// custom deser for color found in mcdonalds pkpass
 			Some("#") => {
 				let s = s.strip_prefix('#').unwrap();
@@ -245,7 +254,7 @@ impl FromStr for RgbColor {
 
 				Ok(Self(red, green, blue))
 			}
-			_ => Err(()),
+			_ => Err("format not recognized"),
 		}
 	}
 }
@@ -253,7 +262,8 @@ impl FromStr for RgbColor {
 impl<'de> Deserialize<'de> for RgbColor {
 	fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
 		let s = String::deserialize(deserializer)?;
-		Ok(s.parse().unwrap())
+		s.parse()
+			.map_err(|msg| serde::de::Error::custom(format!("could not parse color: {msg}")))
 	}
 }
 

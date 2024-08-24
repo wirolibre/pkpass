@@ -11,14 +11,16 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-chrono = { version = "0.4.38", features = ["serde", "unstable-locales"] }
-hex = "0.4.3"
-openssl = "0.10.64"
-serde = "1.0.204"
-serde_json = "1.0.120"
-thiserror = "1.0.63"
-unic-langid = "0.9.5"
-url = { version = "2.5.2", features = ["serde"] }
-uuid = { version = "1.10.0", features = ["v4"] }
-yansi = "1.0.1"
-zip = "2.1.3"
+openssl.workspace = true
+ron.workspace = true
+
+chrono = { version = "0.4", features = ["serde", "unstable-locales"] }
+hex = "0.4"
+serde = "1"
+serde_json = "1"
+thiserror = "1"
+unic-langid = "0.9"
+url = { version = "2", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+yansi = "1"
+zip = "2"

@@ -16,6 +16,9 @@ rust-version = "1.77"
 [workspace.dependencies]
 pkpass = { path = "pkpass" }
 
+openssl = "0.10"
+ron = "0.8"
+
 [workspace.lints]
 [workspace.lints.rust]
 unsafe_code = "deny"

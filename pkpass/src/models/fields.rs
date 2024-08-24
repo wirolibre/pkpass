@@ -1,14 +1,20 @@
 use super::semantics::SemanticTags;
 use serde::{Deserialize, Serialize};
 
+// TODO: insert design pictures to show layout diffs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub enum PassKind {
-	BoardingPass(BoardingPass),
-	Coupon(Coupon),
-	EventTicket(EventTicket),
-	Generic(Generic),
-	StoreCard(StoreCard),
+	/// <https://developer.apple.com/documentation/walletpasses/pass/boardingpass>
+	BoardingPass(Fields),
+	/// <https://developer.apple.com/documentation/walletpasses/pass/coupon>
+	Coupon(Fields),
+	/// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
+	EventTicket(Fields),
+	/// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
+	Generic(Fields),
+	/// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
+	StoreCard(Fields),
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/passfields>
@@ -29,54 +35,16 @@ pub struct Fields {
 
 	#[serde(rename = "auxiliaryFields")]
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
-	pub auxiliary: Vec<RowField>,
+	pub auxiliary: Vec<Field>,
 
 	#[serde(rename = "backFields")]
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub back: Vec<Field>,
-}
-
-/// <https://developer.apple.com/documentation/walletpasses/pass/boardingpass>
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct BoardingPass {
-	#[serde(flatten)]
-	pub fields: Fields,
 
 	/// The type of transit for a boarding pass. This key is invalid for other types of passes.
-	pub transit_type: TransitType,
-}
-
-/// <https://developer.apple.com/documentation/walletpasses/pass/coupon>
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct Coupon {
-	#[serde(flatten)]
-	pub fields: Fields,
-}
-
-/// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct EventTicket {
-	#[serde(flatten)]
-	pub fields: Fields,
-}
-
-/// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct Generic {
-	#[serde(flatten)]
-	pub fields: Fields,
-}
-
-/// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct StoreCard {
-	#[serde(flatten)]
-	pub fields: Fields,
+	// TODO: doc
+	/// PANIC: Only valid for a boarding pass
+	pub transit_type: Option<TransitType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,54 +123,11 @@ pub struct Field {
 
 	pub value: String,
 
-	#[serde(flatten)]
-	pub options: FieldOptions,
-}
+	// TODO: document properly, should only be used in aux fields
+	/// <https://developer.apple.com/documentation/walletpasses/passfields/auxiliaryfields>
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub row: Option<RowBehaviour>,
 
-/// <https://developer.apple.com/documentation/walletpasses/passfields/auxiliaryfields>
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct RowField {
-	pub key: String,
-
-	pub value: String,
-
-	pub row: RowBehaviour,
-
-	#[serde(flatten)]
-	pub options: FieldOptions,
-}
-
-// TODO: check option
-#[derive(Debug, Clone)]
-pub enum RowBehaviour {
-	KeepRow,
-	NewRow,
-}
-
-impl Serialize for RowBehaviour {
-	fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-		match self {
-			Self::KeepRow => 0u8.serialize(serializer),
-			Self::NewRow => 1u8.serialize(serializer),
-		}
-	}
-}
-
-impl<'de> Deserialize<'de> for RowBehaviour {
-	fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-		let num = u8::deserialize(deserializer)?;
-		match num {
-			0 => Ok(Self::KeepRow),
-			1 => Ok(Self::NewRow),
-			_ => Err(serde::de::Error::custom("rowBehaviour doesn't match spec")),
-		}
-	}
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FieldOptions {
 	/// The value of the field, including HTML markup for links.
 	///
 	/// The only supported tag is the `<a>` tag and its href attribute.
@@ -282,4 +207,31 @@ pub struct FieldOptions {
 	/// Metadata the system uses to offer a pass and suggest related actions.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub semantics: Option<SemanticTags>,
+}
+
+// TODO: check option
+#[derive(Debug, Clone)]
+pub enum RowBehaviour {
+	KeepRow,
+	NewRow,
+}
+
+impl Serialize for RowBehaviour {
+	fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+		match self {
+			Self::KeepRow => 0u8.serialize(serializer),
+			Self::NewRow => 1u8.serialize(serializer),
+		}
+	}
+}
+
+impl<'de> Deserialize<'de> for RowBehaviour {
+	fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+		let num = u8::deserialize(deserializer)?;
+		match num {
+			0 => Ok(Self::KeepRow),
+			1 => Ok(Self::NewRow),
+			_ => Err(serde::de::Error::custom("rowBehaviour doesn't match spec")),
+		}
+	}
 }
