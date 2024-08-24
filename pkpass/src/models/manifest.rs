@@ -56,7 +56,7 @@ impl FromStr for Version {
 	}
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Assets {
 	pub images: ImageAssets,
 	localized: HashMap<LanguageIdentifier, LocalizedAssets>,
@@ -102,7 +102,7 @@ impl Assets {
 	}
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ImageAssets {
 	/// The icon (icon.png)
 	pub icon: ImageAsset,
@@ -166,7 +166,7 @@ impl ImageAssets {
 	}
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct LocalizedAssets {
 	pub images: ImageAssets,
 	pub strings: Option<Vec<u8>>,
@@ -189,7 +189,7 @@ impl LocalizedAssets {
 	}
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ImageAsset {
 	pub size_x1: Option<Vec<u8>>,
 	pub size_x2: Option<Vec<u8>>,

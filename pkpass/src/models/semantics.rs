@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/semantictags>
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SemanticTags {
 	/// The IATA airline code, such as “EX” for flightCode “EX123”. Use this key only for airline boarding passes.
@@ -373,7 +373,7 @@ pub struct SemanticTags {
 	pub wifi_access: Vec<SemanticTagWifiNetwork>,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SemanticTagCurrencyAmount {
 	/// The amount of money.
@@ -386,7 +386,7 @@ pub struct SemanticTagCurrencyAmount {
 }
 
 /// Represents the coordinates of a location.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SemanticTagLocation {
 	/// (Required) The latitude, in degrees.
@@ -397,7 +397,7 @@ pub struct SemanticTagLocation {
 }
 
 /// Represents the parts of a person’s name.
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SemanticTagPersonNameComponents {
 	/// The person’s family name or last name.
@@ -429,7 +429,7 @@ pub struct SemanticTagPersonNameComponents {
 	pub phonetic_representation: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SemanticTagWifiNetwork {
 	/// The password for the `WiFi` network.
@@ -439,7 +439,7 @@ pub struct SemanticTagWifiNetwork {
 	pub ssid: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SemanticEventType {
 	#[serde(rename = "PKEventTypeGeneric")]
 	Generic,
@@ -459,7 +459,7 @@ pub enum SemanticEventType {
 	SocialGathering,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SemanticTagSeat {
 	/// A description of the seat, such as “A flat bed seat”.

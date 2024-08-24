@@ -3,7 +3,7 @@ lints.workspace = true
 [package]
 name = "pkpass-cli"
 version = "0.1.0"
-default-run = "pkpass"
+default-run = "pkp"
 
 authors.workspace = true
 edition.workspace = true
@@ -12,7 +12,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [[bin]]
-name = "pkpass"
+name = "pkp"
 path = "src/main.rs"
 
 [dependencies]

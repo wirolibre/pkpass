@@ -1,7 +1,7 @@
 use super::semantics::SemanticTags;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub enum PassKind {
 	BoardingPass(BoardingPass),
@@ -12,7 +12,7 @@ pub enum PassKind {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/passfields>
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Fields {
 	#[serde(rename = "headerFields")]
@@ -37,7 +37,7 @@ pub struct Fields {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/boardingpass>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct BoardingPass {
 	#[serde(flatten)]
@@ -48,7 +48,7 @@ pub struct BoardingPass {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/coupon>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Coupon {
 	#[serde(flatten)]
@@ -56,7 +56,7 @@ pub struct Coupon {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EventTicket {
 	#[serde(flatten)]
@@ -64,7 +64,7 @@ pub struct EventTicket {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Generic {
 	#[serde(flatten)]
@@ -72,14 +72,14 @@ pub struct Generic {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct StoreCard {
 	#[serde(flatten)]
 	pub fields: Fields,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TransitType {
 	#[serde(rename = "PKTransitTypeAir")]
 	Air,
@@ -94,7 +94,7 @@ pub enum TransitType {
 }
 
 /// The data detectors to apply to the value of a field on the back of the pass.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Clone, Deserialize, Debug)]
 pub enum DetectorType {
 	#[serde(rename = "PKDataDetectorTypePhoneNumber")]
 	PhoneNumber,
@@ -107,7 +107,7 @@ pub enum DetectorType {
 }
 
 /// The style of the date to display in the field.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Clone, Deserialize, Debug)]
 pub enum DateStyle {
 	#[serde(rename = "PKDateStyleNone")]
 	None,
@@ -122,7 +122,7 @@ pub enum DateStyle {
 }
 
 /// The style of the number to display in the field.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Clone, Deserialize, Debug)]
 pub enum NumberStyle {
 	#[serde(rename = "PKNumberStyleDecimal")]
 	Decimal,
@@ -135,7 +135,7 @@ pub enum NumberStyle {
 }
 
 /// The alignment for the content of a field.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Clone, Deserialize, Debug)]
 pub enum TextAlignment {
 	#[serde(rename = "PKTextAlignmentLeft")]
 	Left,
@@ -148,7 +148,7 @@ pub enum TextAlignment {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/passfieldcontent>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Field {
 	pub key: String,
@@ -160,7 +160,7 @@ pub struct Field {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/passfields/auxiliaryfields>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RowField {
 	pub key: String,
@@ -174,7 +174,7 @@ pub struct RowField {
 }
 
 // TODO: check option
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RowBehaviour {
 	KeepRow,
 	NewRow,
@@ -195,12 +195,12 @@ impl<'de> Deserialize<'de> for RowBehaviour {
 		match num {
 			0 => Ok(Self::KeepRow),
 			1 => Ok(Self::NewRow),
-			_ => Err(todo!()),
+			_ => Err(serde::de::Error::custom("rowBehaviour doesn't match spec")),
 		}
 	}
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FieldOptions {
 	/// The value of the field, including HTML markup for links.

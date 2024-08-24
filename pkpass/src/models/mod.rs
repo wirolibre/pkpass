@@ -18,7 +18,7 @@ pub use semantics::*;
 /// Represent the `pass.json` file content
 ///
 /// <https://developer.apple.com/documentation/walletpasses/pass>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Metadata {
 	/// The version of the file format. The value must be 1.
@@ -145,7 +145,7 @@ pub struct Metadata {
 	pub authentication_token: Option<String>,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ColorTheme {
 	/// A foreground color for the pass, specified as a CSS-style RGB triple, such as rgb(100, 10, 110).
@@ -163,6 +163,7 @@ pub struct ColorTheme {
 	pub background: Option<RgbColor>,
 }
 
+#[derive(Clone)]
 pub struct RgbColor(pub u8, pub u8, pub u8);
 
 impl RgbColor {
@@ -257,7 +258,7 @@ impl<'de> Deserialize<'de> for RgbColor {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/barcodes>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Barcode {
 	/// The format of the barcode.
@@ -280,7 +281,7 @@ pub struct Barcode {
 	pub alt_text: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BarcodeFormat {
 	#[serde(rename = "PKBarcodeFormatQR")]
 	Qr,
@@ -294,7 +295,7 @@ pub enum BarcodeFormat {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/beacons>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Beacon {
 	// The major identifier of a Bluetooth Low Energy location beacon.
@@ -317,7 +318,7 @@ pub struct Beacon {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/locations>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Location {
 	/// The latitude, in degrees, of the location.
@@ -337,7 +338,7 @@ pub struct Location {
 }
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/nfc>
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 // TODO: not Strings
 pub struct Nfc {

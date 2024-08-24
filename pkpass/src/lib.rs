@@ -21,7 +21,7 @@ pub mod sign;
 
 pub use error::{Error, Result};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Pass {
 	pub metadata: Metadata,
 	pub assets: Assets,
@@ -161,9 +161,11 @@ impl Pass {
 		Ok(Self { metadata, assets })
 	}
 
-	pub fn write<W: Write + Seek>(&mut self, identity: Identity, writer: W) -> Result<()> {
-		self.metadata.pass_type_identifier = identity.pass_type_id;
-		self.metadata.team_identifier = identity.team_id;
+	pub fn write<W: Write + Seek>(&self, identity: Identity, writer: W) -> Result<()> {
+		// no cloning nor mutation should happen here
+		let mut metadata = self.metadata.clone();
+		metadata.pass_type_identifier = identity.pass_type_id;
+		metadata.team_identifier = identity.team_id;
 		// ---ugly---
 
 		let mut manifest = Manifest::default();
@@ -172,7 +174,7 @@ impl Pass {
 		let options =
 			SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
-		let pass_data = serde_json::to_vec(&self.metadata)?;
+		let pass_data = serde_json::to_vec(&metadata)?;
 		manifest.add_file("pass.json", &pass_data);
 		zip.start_file("pass.json", options)?;
 		zip.write_all(&pass_data)?;
