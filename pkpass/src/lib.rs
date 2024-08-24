@@ -39,52 +39,9 @@ pub struct PassConfig {
 /// Pass creation
 impl Pass {
 	#[must_use]
-	pub fn new(
-		PassConfig {
-			organization_name,
-			description,
-			serial_number,
-			kind,
-		}: PassConfig,
-	) -> Self {
+	pub fn new(config: PassConfig) -> Self {
 		Self {
-			metadata: Metadata {
-				format_version: 1,
-
-				// TODO: not very clean, is filled later during signing
-				pass_type_identifier: String::new(),
-				team_identifier: String::new(),
-
-				organization_name,
-				description,
-				serial_number,
-
-				// kind,
-				foreground_color: None,
-				label_color: None,
-				background_color: None,
-
-				app_launch_url: None,
-				associated_store_identifiers: Vec::default(),
-
-				barcodes: Vec::default(),
-				beacons: Vec::default(),
-				expiration_date: None,
-				grouping_identifier: None,
-				locations: Vec::default(),
-				logo_text: None,
-				max_distance: None,
-				nfc: None,
-				relevant_date: None,
-				semantics: None,
-				sharing_prohibited: None,
-				suppress_strip_shine: None,
-				user_info: None,
-				voided: None,
-
-				web_service_url: None,
-				authentication_token: None,
-			},
+			metadata: Metadata::new(config),
 			assets: Assets::default(),
 		}
 	}
@@ -120,19 +77,24 @@ impl Pass {
 			Err(e) => return Err(e.into()),
 		};
 
-		if verify == VerifyMode::Yes {
-			if let Some(sig) = signature {
-				let stack = Stack::new()?;
+		match verify {
+			VerifyMode::No => {}
 
-				let store = {
-					let mut store = X509StoreBuilder::new()?;
-					store.add_cert(certificates::apple_root())?;
-					store.add_cert(certificates::apple_wwdr_g4())?;
-					store.set_purpose(X509PurposeId::ANY)?;
-					store.build()
-				};
+			#[cfg(feature = "apple")]
+			VerifyMode::Yes => {
+				if let Some(sig) = signature {
+					let stack = Stack::new()?;
 
-				sig.verify(&stack, &store, Some(&manifest), None, Pkcs7Flags::empty())?;
+					let store = {
+						let mut store = X509StoreBuilder::new()?;
+						store.add_cert(certificates::apple_root())?;
+						store.add_cert(certificates::apple_wwdr_g4())?;
+						store.set_purpose(X509PurposeId::ANY)?;
+						store.build()
+					};
+
+					sig.verify(&stack, &store, Some(&manifest), None, Pkcs7Flags::empty())?;
+				}
 			}
 		}
 

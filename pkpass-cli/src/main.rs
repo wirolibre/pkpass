@@ -68,7 +68,12 @@ struct ReadArgs {
 impl Exec for ReadArgs {
 	fn run(self) -> Result<(), Box<dyn std::error::Error>> {
 		let pkpass = Pass::read(File::open(self.file)?, self.verify_mode)?;
-		println!("{pkpass:?}");
+
+		dbg!(pkpass.metadata);
+
+		// TODO: need custom print, else prints pictures' bytes
+		// dbg!(pkpass.assets)
+
 		Ok(())
 	}
 }
@@ -93,10 +98,13 @@ impl Exec for ConvertArgs {
 			.open(output)?;
 
 		let pkpass = Pass::read(File::open(self.pass)?, VerifyMode::No)?;
+
 		let template = Template {
 			variables: Vec::default(),
 			meta: pkpass.metadata,
 		};
+
+		// TODO: these make no sense in a template: passTypeIdentifier, teamIdentifier, serialNumber,
 
 		ron::ser::to_writer_pretty(output, &template, PrettyConfig::new().struct_names(true))?;
 

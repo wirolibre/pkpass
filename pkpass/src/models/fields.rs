@@ -1,19 +1,19 @@
-use super::semantics::SemanticTags;
+use crate::models::SemanticTags;
 use serde::{Deserialize, Serialize};
 
 // TODO: insert design pictures to show layout diffs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub enum PassKind {
-	/// <https://developer.apple.com/documentation/walletpasses/pass/boardingpass>
+	/// <https://developer.apple.com/documentation/walletpasses/pass/boardingpass-data.dictionary>
 	BoardingPass(Fields),
-	/// <https://developer.apple.com/documentation/walletpasses/pass/coupon>
+	/// <https://developer.apple.com/documentation/walletpasses/pass/coupon-data.dictionary>
 	Coupon(Fields),
-	/// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
+	/// <https://developer.apple.com/documentation/walletpasses/pass/eventticket-data.dictionary>
 	EventTicket(Fields),
-	/// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
+	/// <https://developer.apple.com/documentation/walletpasses/pass/generic-data.dictionary>
 	Generic(Fields),
-	/// <https://developer.apple.com/documentation/walletpasses/pass/eventticket>
+	/// <https://developer.apple.com/documentation/walletpasses/pass/storecard-data.dictionary>
 	StoreCard(Fields),
 }
 

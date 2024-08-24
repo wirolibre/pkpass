@@ -56,8 +56,18 @@ pub struct Metadata {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub background_color: Option<RgbColor>,
 
-	#[serde(flatten)]
-	pub(crate) kind: PassKind,
+	// TODO: ugly but does not use flatten, which is required for ron should only be set once, and only one for the living of a pass
+	// also quite heavy, take 5 times the size required
+	#[serde(skip_serializing_if = "Option::is_none")]
+	boarding_pass: Option<Fields>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	coupon: Option<Fields>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	event_ticket: Option<Fields>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	generic: Option<Fields>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	store_card: Option<Fields>,
 
 	/// A URL the system passes to the associated app from [`associated_store_identifiers`] during launch.
 	///

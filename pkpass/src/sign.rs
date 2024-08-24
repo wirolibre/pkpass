@@ -1,5 +1,4 @@
 use openssl::{
-	nid::Nid,
 	pkcs12::ParsedPkcs12_2,
 	pkey::{PKey, Private},
 	stack::Stack,
@@ -24,7 +23,10 @@ impl Identity {
 		}
 	}
 
+	#[cfg(feature = "apple")]
 	pub fn from_apple_pen(pen: SigningPen) -> io::Result<Self> {
+		use openssl::nid::Nid;
+
 		let name = pen.signer_certificate.subject_name();
 
 		let get_entry = |nid: Nid| {
@@ -100,19 +102,33 @@ impl SigningPen {
 	}
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VerifyMode {
-	#[default]
-	Yes,
 	No,
+
+	// TODO: rename to `Apple` when other exist?
+	#[cfg(feature = "apple")]
+	Yes,
+}
+
+impl Default for VerifyMode {
+	fn default() -> Self {
+		#[cfg(feature = "apple")]
+		return Self::Yes;
+		#[cfg(not(feature = "apple"))]
+		return Self::No;
+	}
 }
 
 impl FromStr for VerifyMode {
 	type Err = std::io::Error;
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		match s {
-			"yes" => Ok(Self::Yes),
 			"no" => Ok(Self::No),
+
+			#[cfg(feature = "apple")]
+			"yes" => Ok(Self::Yes),
+
 			_ => Err(io::Error::new(io::ErrorKind::InvalidInput, "")),
 		}
 	}
@@ -121,20 +137,26 @@ impl FromStr for VerifyMode {
 impl fmt::Display for VerifyMode {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
-			Self::Yes => write!(f, "yes"),
 			Self::No => write!(f, "no"),
+
+			#[cfg(feature = "apple")]
+			Self::Yes => write!(f, "yes"),
 		}
 	}
 }
 
 pub mod certificates {
+	#[cfg(feature = "apple")]
 	use openssl::x509::X509;
 
+	#[cfg(feature = "apple")]
 	const APPLE_ROOT: &[u8; 1215] = include_bytes!("AppleIncRootCertificate.cer");
+	#[cfg(feature = "apple")]
 	const APPLE_WWDR_G4: &[u8; 1113] = include_bytes!("AppleWWDRCAG4.cer");
 
 	/// *Worldwide Developer Relations* Apple certificates
 	#[must_use]
+	#[cfg(feature = "apple")]
 	pub fn apple_root() -> X509 {
 		X509::from_der(APPLE_ROOT)
 			.unwrap_or_else(|_| unreachable!("bundled Apple Root certificate is valid"))
@@ -142,17 +164,20 @@ pub mod certificates {
 
 	/// *Worldwide Developer Relations* Apple certificates
 	#[must_use]
+	#[cfg(feature = "apple")]
 	pub fn apple_wwdr_g4() -> X509 {
 		X509::from_der(APPLE_WWDR_G4)
 			.unwrap_or_else(|_| unreachable!("bundled Apple WWDR G4 certificate is valid"))
 	}
 
 	#[test]
+	#[cfg(feature = "apple")]
 	fn apple_root_cert_valid() {
 		let _ = apple_root();
 	}
 
 	#[test]
+	#[cfg(feature = "apple")]
 	fn apple_wwdr_g4_cert_valid() {
 		let _ = apple_wwdr_g4();
 	}
