@@ -22,12 +22,13 @@ ron = "0.8"
 [workspace.lints]
 [workspace.lints.rust]
 unsafe_code = "deny"
+# missing_docs = "warn"
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
 # cargo = { level = "warn", priority = -1 }
 
-expect_used = "warn"
+# expect_used = "warn"
 # missing_docs_in_private_items = "warn"
 print_literal = "warn"
 redundant_pub_crate = "allow"

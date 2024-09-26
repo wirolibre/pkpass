@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+// TODO: replace with a map, huge empty space is taken when only a few will be registered
 /// <https://developer.apple.com/documentation/walletpasses/pass/semantictags>
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

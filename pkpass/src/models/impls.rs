@@ -45,6 +45,7 @@ impl Metadata {
 			max_distance: None,
 			nfc: None,
 			relevant_date: None,
+			// TODO: huge empty thingy
 			semantics: None,
 			sharing_prohibited: None,
 			suppress_strip_shine: None,

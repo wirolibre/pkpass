@@ -365,10 +365,10 @@ pub struct Nfc {
 	/// The public encryption key the Value Added Services protocol uses. Use a
 	/// Base64-encoded X.509 `SubjectPublicKeyInfo` structure that contains an
 	/// ECDH public key for group P256.
-	encryption_public_key: String,
+	pub encryption_public_key: String,
 
 	/// The payload the device transmits to the Apple Pay terminal. The size must be no more than 64 bytes. The system truncates messages longer than 64 bytes.
-	message: String,
+	pub message: String,
 
 	/// A Boolean value that indicates whether the NFC pass requires
 	/// authentication. The default value is false. A value of true requires
@@ -378,5 +378,5 @@ pub struct Nfc {
 	/// to prevent users from sharing passes with older iOS versions and
 	/// bypassing the authentication requirement.
 	#[serde(skip_serializing_if = "Option::is_none")]
-	requires_authentication: Option<bool>,
+	pub requires_authentication: Option<bool>,
 }

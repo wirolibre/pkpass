@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		.truncate(true)
 		.open("custom.pkpass")?;
 
-	pass.write(identity, file)?;
+	pass.write(&identity, file)?;
 
 	Ok(())
 }

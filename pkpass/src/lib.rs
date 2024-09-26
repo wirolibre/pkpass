@@ -150,11 +150,13 @@ impl Pass {
 	/// pass.write(identity, file)?;
 	/// # Ok(())}
 	/// ```
-	pub fn write(&self, identity: Identity, writer: impl Write + Seek) -> Result<()> {
+	pub fn write(&self, identity: &Identity, writer: impl Write + Seek) -> Result<()> {
 		// TODO: no cloning nor mutation should happen here
 		let mut metadata = self.metadata.clone();
-		metadata.pass_type_identifier = identity.pass_type_id;
-		metadata.team_identifier = identity.team_id;
+		metadata
+			.pass_type_identifier
+			.clone_from(&identity.pass_type_id);
+		metadata.team_identifier.clone_from(&identity.team_id);
 		// ---ugly---
 
 		let mut manifest = Manifest::default();
