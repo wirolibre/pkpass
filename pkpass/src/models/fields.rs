@@ -2,17 +2,80 @@ use crate::models::SemanticTags;
 use serde::{Deserialize, Serialize};
 
 // TODO: insert design pictures to show layout diffs
+/// `PassKind` sets the overall pass appearence.
+///
+/// Some pass kinds also require specific fields information.
+///
+/// See [Pass Design and Creation], specifically the "Pass Style Sets the
+/// Overall Visual Appearance" section.
+///
+/// [Pass Design and Creation]: https://developer.apple.com/library/archive/documentation/UserExperience/Conceptual/PassKit_PG/Creating.html
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub enum PassKind {
 	/// <https://developer.apple.com/documentation/walletpasses/pass/boardingpass-data.dictionary>
 	BoardingPass(Fields),
+
 	/// <https://developer.apple.com/documentation/walletpasses/pass/coupon-data.dictionary>
 	Coupon(Fields),
+
 	/// <https://developer.apple.com/documentation/walletpasses/pass/eventticket-data.dictionary>
 	EventTicket(Fields),
+
+	/// Generic Layout
+	///
+	/// # Layouts
+	///
+	/// ## With rectangular barcode
+	///
+	/// ```text
+	/// ┌──────────────────────────────────────────────┐
+	/// │ ┌───┐ ┌──────────────────┐ ┌───────────────┐ │
+	/// │ │ L │ │ Logo Text        │ │ Header Fields │ │
+	/// │ └───┘ └──────────────────┘ └───────────────┘ │
+	/// │ ┌────────────────────────┐ ┌───────────────┐ │
+	/// │ │                        │ │               │ │
+	/// │ │ Primary Field          │ │ Thumbnail     │ │
+	/// │ │                        │ │               │ │
+	/// │ └────────────────────────┘ └───────────────┘ │
+	/// │ ┌──────────────────────────────────────────┐ │
+	/// │ │ Secondary Fields                         │ │
+	/// │ └──────────────────────────────────────────┘ │
+	/// │ ┌──────────────────────────────────────────┐ │
+	/// │ │ Auxiliary Fields                         │ │
+	/// │ └──────────────────────────────────────────┘ │
+	/// │ ┌──────────────────────────────────────────┐ │
+	/// │ │                                          │ │
+	/// │ │ Rectangular Barcode                      │ │
+	/// │ │                                          │ │
+	/// │ └──────────────────────────────────────────┘ │
+	/// └──────────────────────────────────────────────┘
+	/// ```
+	///
+	/// ## With square barcode
+	///
+	/// ```text
+	/// ┌──────────────────────────────────────────────┐
+	/// │ ┌───┐ ┌──────────────────┐ ┌───────────────┐ │
+	/// │ │ L │ │ Logo Text        │ │ Header Fields │ │
+	/// │ └───┘ └──────────────────┘ └───────────────┘ │
+	/// │ ┌────────────────────────┐ ┌───────────────┐ │
+	/// │ │                        │ │               │ │
+	/// │ │ Primary Field          │ │ Thumbnail     │ │
+	/// │ │                        │ │               │ │
+	/// │ └────────────────────────┘ └───────────────┘ │
+	/// │ ┌──────────────────────────────────────────┐ │
+	/// │ │ Secondary and Auxiliary Fields           │ │
+	/// │ └──────────────────────────────────────────┘ │
+	/// │             ┌──────────────────┐             │
+	/// │             │  Square Barcode  │             │
+	/// │             └──────────────────┘             │
+	/// └──────────────────────────────────────────────┘
+	/// ```
+	///
 	/// <https://developer.apple.com/documentation/walletpasses/pass/generic-data.dictionary>
 	Generic(Fields),
+
 	/// <https://developer.apple.com/documentation/walletpasses/pass/storecard-data.dictionary>
 	StoreCard(Fields),
 }

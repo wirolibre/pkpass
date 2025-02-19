@@ -1,3 +1,5 @@
+//! pkpass-cli
+
 use clap::Parser;
 use pkpass::{sign::VerifyMode, template::Template, Pass};
 use ron::ser::PrettyConfig;
@@ -91,6 +93,7 @@ impl Exec for ConvertArgs {
 			.output
 			.unwrap_or_else(|| self.pass.file_name().unwrap().into())
 			.with_extension("ron");
+
 		let output = fs::OpenOptions::new()
 			.write(true)
 			.create(true)
@@ -106,7 +109,11 @@ impl Exec for ConvertArgs {
 
 		// TODO: these make no sense in a template: passTypeIdentifier, teamIdentifier, serialNumber,
 
-		ron::ser::to_writer_pretty(output, &template, PrettyConfig::new().struct_names(true))?;
+		ron::Options::default().to_io_writer_pretty(
+			&output,
+			&template,
+			PrettyConfig::new().struct_names(true),
+		)?;
 
 		Ok(())
 	}

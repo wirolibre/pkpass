@@ -27,4 +27,6 @@ unic-langid = "0.9"
 url = { version = "2", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 yansi = "1"
-zip = "2"
+zip = "6"
+
+[dev-dependencies]

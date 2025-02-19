@@ -137,7 +137,7 @@ impl Pass {
 	/// Bundle a pass to a `pkpass` file.
 	///
 	/// ```ignore
-	/// # fn main() ->
+	/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 	/// let pass = Pass::new(PassConfig { ... });
 	/// let identity = Identity::new_no_signature(...);
 	///

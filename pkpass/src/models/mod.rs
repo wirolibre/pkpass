@@ -232,7 +232,7 @@ impl FromStr for RgbColor {
 					.map_err(|_| "could not parse blue color")?;
 				if vec.next().is_some() {
 					return Err("rgb only has 3 colors");
-				};
+				}
 
 				Ok(Self(red, green, blue))
 			}
@@ -339,7 +339,9 @@ pub struct Beacon {
 
 /// <https://developer.apple.com/documentation/walletpasses/pass/locations>
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase",
+// deny_unknown_fields
+)]
 pub struct Location {
 	/// The latitude, in degrees, of the location.
 	pub latitude: f64,

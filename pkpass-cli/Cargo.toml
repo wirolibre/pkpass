@@ -22,4 +22,4 @@ openssl.workspace = true
 ron.workspace = true
 
 clap = { version = "4", features = ["derive", "env"] }
-rcgen = { version = "0.13", features = ["x509-parser"] }
+rcgen = { version = "0.14", features = ["x509-parser"] }

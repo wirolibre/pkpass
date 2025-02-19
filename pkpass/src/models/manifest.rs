@@ -24,9 +24,7 @@ impl Manifest {
 	}
 
 	pub(crate) fn verify_file(&self, name: &str, data: &[u8]) -> bool {
-		self.assets
-			.get(name)
-			.map_or(false, |sha| *sha == sha1(data))
+		self.assets.get(name).is_some_and(|sha| *sha == sha1(data))
 	}
 }
 

@@ -62,7 +62,7 @@ impl Metadata {
 			PassKind::EventTicket(fields) => this.event_ticket = Some(fields),
 			PassKind::Generic(fields) => this.generic = Some(fields),
 			PassKind::StoreCard(fields) => this.store_card = Some(fields),
-		};
+		}
 
 		this
 	}

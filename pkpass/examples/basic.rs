@@ -1,16 +1,17 @@
-use openssl::pkcs12::Pkcs12;
 use pkpass::{
 	models::{Fields, PassKind},
-	sign::{Identity, SigningPen},
 	Pass, PassConfig,
 };
-use std::{fs, io};
+use std::fs;
 use uuid::Uuid;
+
+#[path = "common/identity.rs"]
+mod identity;
 
 const ICON: &[u8; 314_069] = include_bytes!("assets/icon.png");
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-	let identity = get_identity()?;
+	let identity = identity::get_identity()?;
 
 	let fields = Fields::default();
 
@@ -34,17 +35,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	pass.write(&identity, file)?;
 
 	Ok(())
-}
-
-fn get_identity() -> io::Result<Identity> {
-	let archive = fs::read("certs/pkpass.p12")?;
-	let pkcs12_err = "Signing identity is not a valid PKCS#12 archive DER-encoded";
-	let pkcs12 = Pkcs12::from_der(&archive)
-		.map_err(|_err| io::Error::new(io::ErrorKind::InvalidData, pkcs12_err))?
-		.parse2("")?;
-
-	let pen = SigningPen::from_pkcs12(pkcs12)?;
-	let identity = Identity::from_apple_pen(pen)?;
-
-	Ok(identity)
 }
